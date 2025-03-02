@@ -9,6 +9,7 @@ import (
 	"wallet-api/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gofrs/uuid/v5"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -27,14 +28,15 @@ func NewWalletController(service service.WalletService, logger *slog.Logger) *Wa
 func (ctrl *WalletController) GetWalletById(ctx *gin.Context) {
 	op := "controller.wallet-controller.GetWalletById"
 
-	id := ctx.Query("id")
-
-	dto, err := ctrl.service.GetWalletById(ctx, id)
-	if err.Error() == config.UUIDIsNotValid {
-		ctrl.log.Warn("UUID is not valid", logger.Err(err), "op", op)
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err})
+	id, err := uuid.FromString(ctx.Param("id"))
+	if err != nil {
+		ctrl.log.Error("Bad request: invalid id", logger.Err(err), "op", op)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
+	ctrl.log.Info("Start validate wallet id from param", "op", op)
+
+	dto, err := ctrl.service.GetWalletById(ctx, id)
 
 	if err == pgx.ErrNoRows {
 		ctrl.log.Warn("Wallet not found with id", "id", id, "op", op)
@@ -64,13 +66,14 @@ func (ctrl *WalletController) DepositToWalletByID(ctx *gin.Context) {
 	}
 
 	err := ctrl.service.OperationWithWalletByID(ctx, dto)
-	if err.Error() == config.UUIDIsNotValid || err.Error() == config.InvalidOperation || err.Error() == config.AmountIsNotValid {
-		ctrl.log.Warn("One of the parameters contains unprocessable entity", logger.Err(err), "op", op)
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err})
-		return
-	}
 
 	if err != nil {
+		if err.Error() == config.InvalidOperation || err.Error() == config.AmountIsNotValid {
+			ctrl.log.Warn("One of the parameters contains unprocessable entity", logger.Err(err), "op", op)
+			ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err})
+			return
+		}
+
 		ctrl.log.Error("Error to update wallet by id", logger.Err(err), "op", op)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		return

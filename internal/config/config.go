@@ -25,7 +25,7 @@ type Config struct {
 
 type HTTPServer struct {
 	Address string `env:"address" env-default:"localhost"`
-	Port    string `env:"address" env-default:"8080"`
+	Port    string `env:"port" env-default:"80"`
 }
 
 type Postgres struct {

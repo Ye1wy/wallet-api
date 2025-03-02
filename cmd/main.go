@@ -15,11 +15,12 @@ import (
 
 func main() {
 	cfg := config.MustLoad()
+	cfg.PrintAll()
 	log := logger.NewLogger(cfg.Env)
 	log.Info("Logger created")
 
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", cfg.PostgresUser, cfg.PostgresPassword, cfg.PostgresHost, cfg.PostgresPort, cfg.PostgresDatabase)
-
+	fmt.Println(connStr)
 	conn, err := postgres.Connect(connStr, log)
 	if err != nil {
 		os.Exit(1)
@@ -40,5 +41,5 @@ func main() {
 	router := routes.NewRouter(routerConfig)
 	log.Info("Router is created")
 	log.Info("Server start")
-	router.Run(cfg.Port)
+	router.Run(":" + cfg.Port)
 }
