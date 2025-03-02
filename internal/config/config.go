@@ -9,6 +9,14 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
+const (
+	UUIDIsNotValid    = "not valid"
+	AmountIsNotValid  = "amount is not valid"
+	InvalidOperation  = "invalid operation"
+	OperationDeposit  = "DEPOSIT"
+	OperationWithdraw = "WITHDRAW"
+)
+
 type Config struct {
 	Env        string `env:"env" env-default:"local"`
 	HTTPServer `env:"http_server"`

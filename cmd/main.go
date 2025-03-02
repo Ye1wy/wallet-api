@@ -5,8 +5,12 @@ import (
 	"fmt"
 	"os"
 	"wallet-api/internal/config"
+	"wallet-api/internal/controller"
 	"wallet-api/internal/database/postgres"
 	"wallet-api/internal/logger"
+	"wallet-api/internal/repository"
+	"wallet-api/internal/routes"
+	"wallet-api/internal/service"
 )
 
 func main() {
@@ -22,5 +26,19 @@ func main() {
 	}
 	defer conn.Close(context.Background())
 
+	repos := repository.NewPostgresWalletRepository(conn, log)
+	log.Info("Repository is created")
+	service := service.NewWalletServiceImpl(repos, log)
+	log.Info("Service is created")
+	controller := controller.NewWalletController(service, log)
+	log.Info("Controller is created")
+
+	routerConfig := routes.RouterConfig{
+		WalletController: controller,
+	}
+
+	router := routes.NewRouter(routerConfig)
+	log.Info("Router is created")
 	log.Info("Server start")
+	router.Run(cfg.Port)
 }

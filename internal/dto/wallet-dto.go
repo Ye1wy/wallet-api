@@ -5,7 +5,7 @@ type WalletDTO struct {
 }
 
 type WalletOperationRequestDTO struct {
-	WalletId      string  `json:"id" validate:"required,uuid"`
-	OperationType string  `json:"operation_type" validate:"required,oneof=DEPOSIT WITHDRAW"`
-	Amount        float64 `json:"amount" validate:"required,gte=0"`
+	Id            string  `json:"id" binding:"required"`
+	OperationType string  `json:"operation_type" binding:"required"`
+	Amount        float64 `json:"amount" binding:"required"`
 }

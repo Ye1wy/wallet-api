@@ -3,33 +3,79 @@ package controller
 import (
 	"log/slog"
 	"net/http"
+	"wallet-api/internal/config"
+	"wallet-api/internal/dto"
+	"wallet-api/internal/logger"
 	"wallet-api/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 )
 
-type walletController struct {
+type WalletController struct {
 	service service.WalletService
 	log     *slog.Logger
 }
 
-func NewWalletController(service service.WalletService, logger *slog.Logger) *walletController {
-	return &walletController{
+func NewWalletController(service service.WalletService, logger *slog.Logger) *WalletController {
+	return &WalletController{
 		service: service,
 		log:     logger,
 	}
 }
 
-func (ctrl *walletController) GetWalletById(ctx *gin.Context) {
+func (ctrl *WalletController) GetWalletById(ctx *gin.Context) {
 	op := "controller.wallet-controller.GetWalletById"
 
+	id := ctx.Query("id")
+
+	dto, err := ctrl.service.GetWalletById(ctx, id)
+	if err.Error() == config.UUIDIsNotValid {
+		ctrl.log.Warn("UUID is not valid", logger.Err(err), "op", op)
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err})
+		return
+	}
+
+	if err == pgx.ErrNoRows {
+		ctrl.log.Warn("Wallet not found with id", "id", id, "op", op)
+		ctx.JSON(http.StatusNotFound, gin.H{"massage": "Wallet with that uuid is not found"})
+		return
+	}
+
+	if err != nil {
+		ctrl.log.Error("Error to get wallet by id", logger.Err(err), "op", op)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+
 	ctrl.log.Info("Wallet data retrived successfully", "op", op)
-	ctx.JSON(http.StatusOK, nil)
+	ctx.JSON(http.StatusOK, dto)
 }
 
-func (ctrl *walletController) DepositToWalletByID(ctx *gin.Context) {
+func (ctrl *WalletController) DepositToWalletByID(ctx *gin.Context) {
 	op := "controller.wallet-controller.DepositToWalletByID"
 
+	var dto dto.WalletOperationRequestDTO
+
+	if err := ctx.ShouldBindJSON(&dto); err != nil {
+		ctrl.log.Error("Failed to bind JSON to DTO", logger.Err(err), "op", op)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		return
+	}
+
+	err := ctrl.service.OperationWithWalletByID(ctx, dto)
+	if err.Error() == config.UUIDIsNotValid || err.Error() == config.InvalidOperation || err.Error() == config.AmountIsNotValid {
+		ctrl.log.Warn("One of the parameters contains unprocessable entity", logger.Err(err), "op", op)
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err})
+		return
+	}
+
+	if err != nil {
+		ctrl.log.Error("Error to update wallet by id", logger.Err(err), "op", op)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+
 	ctrl.log.Info("Wallet data retrived successfully", "op", op)
-	ctx.JSON(http.StatusOK, nil)
+	ctx.JSON(http.StatusOK, gin.H{"massage": "balance is updated"})
 }

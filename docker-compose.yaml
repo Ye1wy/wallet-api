@@ -1,0 +1,55 @@
+version: "3.9"
+
+services:
+  # ----- Database -----
+  todo-list-db:
+    image: postgres:17.0
+    container_name: todo-list-db
+
+    env_file:
+      - ./todo-list/files/.env
+
+    volumes:
+      - todo_list_db_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+    ports:
+      - "5432:5432"
+    restart: always
+    networks:
+      - todo-list-network
+
+  # ----- Service -----
+  todo-list:
+    build:
+      context: ./
+      dockerfile: ./todo-list/Dockerfile
+    container_name: todo-list
+    
+    environment:
+      - CONFIG_PATH=/app/.env
+    
+    env_file:
+      - ./todo-list/files/.env
+
+    depends_on:
+      todo-list-db:
+        condition: service_healthy
+
+    ports:
+      - "8080:80"
+    restart: always
+    networks:
+      - todo-list-network
+
+volumes:
+    todo_list_db_data:
+
+networks:
+  todo-list-network:
+    driver: bridge
