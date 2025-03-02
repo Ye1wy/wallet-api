@@ -1,9 +1,22 @@
-FROM golang:latest
+FROM golang:1.24.0-alpine AS builder
+
+RUN apk add --no-cache git
 
 WORKDIR /app
 
-COPY ./ /app
+COPY go.mod go.sum ./
 
-RUN /bin/sh /app/docker/tuner.sh
+RUN go mod tidy
 
-CMD ["/app/bin/app"]
+COPY . .
+
+RUN go build -o /app/bin/app ./cmd/main.go
+
+FROM alpine:latest
+
+WORKDIR /service
+
+COPY --from=builder /app/bin/app .
+COPY --from=builder /app/config.env /app/config.env
+
+CMD ["./app"]

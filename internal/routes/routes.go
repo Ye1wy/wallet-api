@@ -20,7 +20,7 @@ func NewRouter(cfg RouterConfig) router {
 	}
 
 	r.router.GET("/api/v1/wallets/:id", cfg.WalletController.GetWalletById)
-	r.router.POST("/api/v1/wallet", cfg.WalletController.DepositToWalletByID)
+	r.router.POST("/api/v1/wallet", cfg.WalletController.OperationWithWalletByID)
 
 	return r
 }

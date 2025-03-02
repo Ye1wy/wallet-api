@@ -11,3 +11,8 @@ type WalletOperationRequestDTO struct {
 	OperationType string    `json:"operation_type" binding:"required"`
 	Amount        float64   `json:"amount" binding:"required"`
 }
+
+type ErrorDTO struct {
+	Error      string
+	StatusCode int
+}

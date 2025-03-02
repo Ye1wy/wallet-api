@@ -25,6 +25,19 @@ func NewWalletController(service service.WalletService, logger *slog.Logger) *Wa
 	}
 }
 
+// GetWalletById godoc
+//
+//	@Summary		Get Wallat By Id
+//	@Description	Get wallet data by uuid
+//	@Tags			wallets
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		uuid.UUID true "Wallet ID"
+//	@Success		200	{object}	dto.WalletDTO
+//	@Failure		400	{object}	dto.ErrorDTO
+//	@Failure		404	{object}	dto.ErrorDTO
+//	@Failure		500	{object}	dto.ErrorDTO
+//	@Router			/api/v1/wallets/{id} [get]
 func (ctrl *WalletController) GetWalletById(ctx *gin.Context) {
 	op := "controller.wallet-controller.GetWalletById"
 
@@ -54,8 +67,20 @@ func (ctrl *WalletController) GetWalletById(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto)
 }
 
-func (ctrl *WalletController) DepositToWalletByID(ctx *gin.Context) {
-	op := "controller.wallet-controller.DepositToWalletByID"
+// OperationWithWalletById godoc
+//
+//	@Summary		Operation with wallet by id
+//	@Description	Change wallet data with operation deposit and withdraw
+//	@Tags			tasks
+//	@Accept			json
+//	@Produce		dto.ErrorDTO
+//	@Success		200	{object}	dto.ErrorDTO
+//	@Failure		400	{object}	dto.ErrorDTO
+//	@Failure		422	{object}	dto.ErrorDTO
+//	@Failure		500	{object}	dto.ErrorDTO
+//	@Router			/api/v1/wallet [post]
+func (ctrl *WalletController) OperationWithWalletByID(ctx *gin.Context) {
+	op := "controller.wallet-controller.OperationWithWalletByID"
 
 	var dto dto.WalletOperationRequestDTO
 

@@ -13,6 +13,11 @@ import (
 	"wallet-api/internal/service"
 )
 
+//	@title			Swagger for wallet API
+//	@version		1.0
+//	@description	This api created for the test task
+//	@host			localhost:8080
+//	@BasePath		/
 func main() {
 	cfg := config.MustLoad()
 	cfg.PrintAll()

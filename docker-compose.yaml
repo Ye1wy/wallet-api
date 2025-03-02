@@ -50,7 +50,6 @@ services:
 
 volumes:
     wallet_service_db_data:
-
 networks:
   wallet-service-network:
     driver: bridge
