@@ -2,15 +2,15 @@ version: "3.9"
 
 services:
   # ----- Database -----
-  todo-list-db:
+  wallet-service-db:
     image: postgres:17.0
-    container_name: todo-list-db
+    container_name: wallet-service-db
 
     env_file:
-      - ./todo-list/files/.env
+      - ./config.env
 
     volumes:
-      - todo_list_db_data:/var/lib/postgresql/data
+      - wallet_service_db_data:/var/lib/postgresql/data
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
@@ -22,34 +22,34 @@ services:
       - "5432:5432"
     restart: always
     networks:
-      - todo-list-network
+      - wallet-service-network
 
   # ----- Service -----
-  todo-list:
+  wallet-service:
     build:
       context: ./
-      dockerfile: ./todo-list/Dockerfile
-    container_name: todo-list
+      dockerfile: ./docker/Dockerfile
+    container_name: wallet-service
     
     environment:
-      - CONFIG_PATH=/app/.env
+      - CONFIG_PATH=/app/config.env
     
     env_file:
-      - ./todo-list/files/.env
+      - ./config.env
 
     depends_on:
-      todo-list-db:
+      wallet-service-db:
         condition: service_healthy
 
     ports:
       - "8080:80"
     restart: always
     networks:
-      - todo-list-network
+      - wallet-service-network
 
 volumes:
-    todo_list_db_data:
+    wallet_service_db_data:
 
 networks:
-  todo-list-network:
+  wallet-service-network:
     driver: bridge
