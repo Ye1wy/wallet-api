@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"wallet-api/internal/config"
 	"wallet-api/internal/dto"
@@ -9,34 +10,43 @@ import (
 	"wallet-api/internal/mapper"
 	"wallet-api/internal/repository"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gofrs/uuid/v5"
 	"github.com/jackc/pgx/v5"
 )
 
 type WalletService interface {
-	GetWalletById(ctx *gin.Context, id uuid.UUID) (*dto.WalletDTO, error)
-	OperationWithWalletByID(ctx *gin.Context, dto dto.WalletOperationRequestDTO) error
+	GetWalletById(id uuid.UUID) (*dto.WalletDTO, error)
+	OperationWithWalletByID(dto dto.WalletOperationRequestDTO) error
+	EnqueueOperation(op dto.WalletOperationRequestDTO)
 }
 
 type walletServiceImpl struct {
-	repos repository.WalletRepository
-	log   *slog.Logger
+	repos          repository.WalletRepository
+	operationQueue chan dto.WalletOperationRequestDTO
+	log            *slog.Logger
+}
+
+type WalletOperationJob struct {
+	Operation dto.WalletOperationRequestDTO
+	Resp      chan error
 }
 
 func NewWalletServiceImpl(repos repository.WalletRepository, logger *slog.Logger) *walletServiceImpl {
-	return &walletServiceImpl{
-		repos: repos,
-		log:   logger,
+	service := walletServiceImpl{
+		repos:          repos,
+		operationQueue: make(chan dto.WalletOperationRequestDTO, 1000),
+		log:            logger,
 	}
+
+	return &service
 }
 
-func (s *walletServiceImpl) GetWalletById(ctx *gin.Context, id uuid.UUID) (*dto.WalletDTO, error) {
+func (s *walletServiceImpl) GetWalletById(id uuid.UUID) (*dto.WalletDTO, error) {
 	op := "service.wallet-service.GetWalletById"
 
 	s.log.Info("Start work in service", "op", op)
 
-	model, err := s.repos.GetWalletById(ctx, id)
+	model, err := s.repos.GetWalletById(id)
 	if err != nil {
 		s.log.Error("Error from repos", "op", op)
 		return nil, err
@@ -49,7 +59,7 @@ func (s *walletServiceImpl) GetWalletById(ctx *gin.Context, id uuid.UUID) (*dto.
 	return &dto, nil
 }
 
-func (s *walletServiceImpl) OperationWithWalletByID(ctx *gin.Context, dto dto.WalletOperationRequestDTO) error {
+func (s *walletServiceImpl) OperationWithWalletByID(dto dto.WalletOperationRequestDTO) error {
 	op := "service.wallet-service.OperationWithWalletByID"
 	s.log.Info("Start validate amount", "op", op)
 
@@ -70,7 +80,7 @@ func (s *walletServiceImpl) OperationWithWalletByID(ctx *gin.Context, dto dto.Wa
 
 	s.log.Info("Initialize operation", "op", op)
 
-	err := s.repos.OperationWithWalletByID(ctx, model)
+	err := s.repos.OperationWithWalletByID(model)
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -83,4 +93,29 @@ func (s *walletServiceImpl) OperationWithWalletByID(ctx *gin.Context, dto dto.Wa
 	}
 
 	return nil
+}
+
+func (s *walletServiceImpl) EnqueueOperation(op dto.WalletOperationRequestDTO) {
+	s.operationQueue <- op
+}
+
+func (s *walletServiceImpl) walletWorker(workerID int) {
+	op := fmt.Sprintf("service.wallet-service.Worker-%d", workerID)
+
+	for operation := range s.operationQueue {
+		s.log.Info("Processing operation", "worker", workerID, "op", op)
+
+		err := s.OperationWithWalletByID(operation)
+		if err != nil {
+			s.log.Error("Failed to process operation", "worker", workerID, "error", err, "op", op)
+		} else {
+			s.log.Info("Successfully processed operation", "worker", workerID, "op", op)
+		}
+	}
+}
+
+func (s *walletServiceImpl) StartWorkers(workerCount int) {
+	for i := 0; i < workerCount; i++ {
+		go s.walletWorker(i)
+	}
 }

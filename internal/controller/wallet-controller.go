@@ -3,7 +3,6 @@ package controller
 import (
 	"log/slog"
 	"net/http"
-	"wallet-api/internal/config"
 	"wallet-api/internal/dto"
 	"wallet-api/internal/logger"
 	"wallet-api/internal/service"
@@ -49,7 +48,7 @@ func (ctrl *WalletController) GetWalletById(ctx *gin.Context) {
 	}
 	ctrl.log.Info("Start validate wallet id from param", "op", op)
 
-	dto, err := ctrl.service.GetWalletById(ctx, id)
+	dto, err := ctrl.service.GetWalletById(id)
 
 	if err == pgx.ErrNoRows {
 		ctrl.log.Warn("Wallet not found with id", "id", id, "op", op)
@@ -73,7 +72,7 @@ func (ctrl *WalletController) GetWalletById(ctx *gin.Context) {
 //	@Description	Change wallet data with operation deposit and withdraw
 //	@Tags			tasks
 //	@Accept			json
-//	@Produce		dto.ErrorDTO
+//	@Produce		json
 //	@Success		200	{object}	dto.ErrorDTO
 //	@Failure		400	{object}	dto.ErrorDTO
 //	@Failure		422	{object}	dto.ErrorDTO
@@ -90,19 +89,21 @@ func (ctrl *WalletController) OperationWithWalletByID(ctx *gin.Context) {
 		return
 	}
 
-	err := ctrl.service.OperationWithWalletByID(ctx, dto)
+	ctrl.service.EnqueueOperation(dto)
 
-	if err != nil {
-		if err.Error() == config.InvalidOperation || err.Error() == config.AmountIsNotValid {
-			ctrl.log.Warn("One of the parameters contains unprocessable entity", logger.Err(err), "op", op)
-			ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err})
-			return
-		}
+	// err := ctrl.service.OperationWithWalletByID(dto)
 
-		ctrl.log.Error("Error to update wallet by id", logger.Err(err), "op", op)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err})
-		return
-	}
+	// // if err != nil {
+	// // 	if err.Error() == config.InvalidOperation || err.Error() == config.AmountIsNotValid {
+	// // 		ctrl.log.Warn("One of the parameters contains unprocessable entity", logger.Err(err), "op", op)
+	// // 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err})
+	// // 		return
+	// // 	}
+
+	// // 	ctrl.log.Error("Error to update wallet by id", logger.Err(err), "op", op)
+	// // 	ctx.JSON(http.StatusInternalServerError, gin.H{"error": err})
+	// // 	return
+	// // }
 
 	ctrl.log.Info("Wallet data retrived successfully", "op", op)
 	ctx.JSON(http.StatusOK, gin.H{"massage": "balance is updated"})

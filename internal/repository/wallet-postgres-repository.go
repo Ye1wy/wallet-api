@@ -4,34 +4,39 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 	"wallet-api/internal/config"
 	"wallet-api/internal/logger"
 	"wallet-api/internal/model"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gofrs/uuid/v5"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/net/context"
 )
 
 type WalletRepository interface {
-	GetWalletById(ctx *gin.Context, id uuid.UUID) (*model.Wallet, error)
-	OperationWithWalletByID(ctx *gin.Context, model model.WalletOperation) error
+	GetWalletById(id uuid.UUID) (*model.Wallet, error)
+	OperationWithWalletByID(model model.WalletOperation) error
 }
 
 type postgresWalletRepository struct {
-	db  *pgx.Conn
+	db  *pgxpool.Pool
 	log *slog.Logger
 }
 
-func NewPostgresWalletRepository(conn *pgx.Conn, logger *slog.Logger) *postgresWalletRepository {
+func NewPostgresWalletRepository(conn *pgxpool.Pool, logger *slog.Logger) *postgresWalletRepository {
 	return &postgresWalletRepository{
 		db:  conn,
 		log: logger,
 	}
 }
 
-func (r *postgresWalletRepository) GetWalletById(ctx *gin.Context, id uuid.UUID) (*model.Wallet, error) {
+func (r *postgresWalletRepository) GetWalletById(id uuid.UUID) (*model.Wallet, error) {
 	op := "repository.wallet-postgres-repository.GetWalletById"
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
 
 	query := "SELECT id, balance FROM wallets WHERE id = $1"
 
@@ -52,8 +57,11 @@ func (r *postgresWalletRepository) GetWalletById(ctx *gin.Context, id uuid.UUID)
 	return &wallet, nil
 }
 
-func (r *postgresWalletRepository) OperationWithWalletByID(ctx *gin.Context, model model.WalletOperation) error {
+func (r *postgresWalletRepository) OperationWithWalletByID(model model.WalletOperation) error {
 	op := "repository.wallet-postgres-repository.DepositToWalletByID"
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
 	var request string
 
 	r.log.Info("Determinating operation type", "op", op)

@@ -4,6 +4,8 @@ import (
 	"wallet-api/internal/controller"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type router struct {
@@ -18,6 +20,8 @@ func NewRouter(cfg RouterConfig) router {
 	r := router{
 		router: gin.Default(),
 	}
+
+	r.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	r.router.GET("/api/v1/wallets/:id", cfg.WalletController.GetWalletById)
 	r.router.POST("/api/v1/wallet", cfg.WalletController.OperationWithWalletByID)

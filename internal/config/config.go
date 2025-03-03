@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	UUIDIsNotValid    = "not valid"
 	AmountIsNotValid  = "amount is not valid"
 	InvalidOperation  = "invalid operation"
 	OperationDeposit  = "DEPOSIT"
@@ -34,6 +33,7 @@ type Postgres struct {
 	PostgresUser     string `env:"POSTGRES_USER"`
 	PostgresPassword string `env:"POSTGRES_PASSWORD"`
 	PostgresDatabase string `env:"POSTGRES_DB"`
+	MaxConn          string `env:"postgres_db_pool_max_conns" env-default:"20"`
 }
 
 func MustLoad() *Config {

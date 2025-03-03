@@ -1,0 +1,76 @@
+basePath: /
+definitions:
+  dto.ErrorDTO:
+    properties:
+      error:
+        type: string
+      statusCode:
+        type: integer
+    type: object
+  dto.WalletDTO:
+    properties:
+      balance:
+        type: number
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: This api created for the test task
+  title: Swagger for wallet API
+  version: "1.0"
+paths:
+  /api/v1/wallet:
+    post:
+      consumes:
+      - application/json
+      description: Change wallet data with operation deposit and withdraw
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ErrorDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorDTO'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorDTO'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorDTO'
+      summary: Operation with wallet by id
+      tags:
+      - tasks
+  /api/v1/wallets/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get wallet data by uuid
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.WalletDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorDTO'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorDTO'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorDTO'
+      summary: Get Wallat By Id
+      tags:
+      - wallets
+swagger: "2.0"
