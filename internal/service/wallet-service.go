@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
+	"time"
 	"wallet-api/internal/config"
 	"wallet-api/internal/dto"
 	"wallet-api/internal/logger"
@@ -23,6 +25,8 @@ type WalletService interface {
 type walletServiceImpl struct {
 	repos          repository.WalletRepository
 	operationQueue chan dto.WalletOperationRequestDTO
+	cache          sync.Map // Cache for wallet data
+	cacheTTL       time.Duration
 	log            *slog.Logger
 }
 
@@ -46,15 +50,21 @@ func (s *walletServiceImpl) GetWalletById(id uuid.UUID) (*dto.WalletDTO, error) 
 
 	s.log.Info("Start work in service", "op", op)
 
+	if cachedWallet, found := s.cache.Load(id); found {
+		s.log.Info("Cache hit for wallet", "op", op, "walletID", id)
+		return cachedWallet.(*dto.WalletDTO), nil
+	}
+
 	model, err := s.repos.GetWalletById(id)
 	if err != nil {
 		s.log.Error("Error from repos", "op", op)
 		return nil, err
 	}
 
-	s.log.Info("Start mapping from model to dto", "op", op)
 	dto := mapper.WalletModelToDto(*model)
-	s.log.Info("Mapping successfully done", "op", op)
+	s.cache.Store(id, &dto)
+
+	go s.expireCache(id, s.cacheTTL)
 
 	return &dto, nil
 }
@@ -118,4 +128,10 @@ func (s *walletServiceImpl) StartWorkers(workerCount int) {
 	for i := 0; i < workerCount; i++ {
 		go s.walletWorker(i)
 	}
+}
+
+func (s *walletServiceImpl) expireCache(id uuid.UUID, ttl time.Duration) {
+	time.Sleep(ttl)
+	s.cache.Delete(id)
+	s.log.Info("Cache expired for wallet", "walletID", id)
 }
